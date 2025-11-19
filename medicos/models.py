@@ -8,7 +8,6 @@ class Especialidad(models.Model):
     def __str__(self):
         return self.nombre
 
-
 class Medico(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil_medico')
     especialidad = models.ForeignKey(Especialidad, on_delete=models.SET_NULL, null=True, related_name='medicos')
@@ -18,4 +17,4 @@ class Medico(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Dr. {self.user.first_name} {self.user.last_name} - {self.especialidad}"
+        return f"Dr. {self.user.first_name} {self.user.last_name} - {self.especialidad.nombre if self.especialidad else 'Sin especialidad'}"

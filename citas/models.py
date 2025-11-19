@@ -19,7 +19,7 @@ class Cita(models.Model):
     creada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('medico', 'fecha', 'hora')  # Evita doble reserva
+        unique_together = ('medico', 'fecha', 'hora')
 
     def __str__(self):
-        return f"Cita de {self.paciente} con {self.medico} el {self.fecha} a las {self.hora}"
+        return f"Cita {self.id} - {self.paciente} con {self.medico}"

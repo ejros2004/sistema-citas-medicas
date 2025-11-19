@@ -1,0 +1,506 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 Sistema de Citas Médicas</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Mejorado -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-hospital-alt"></i>
+                    <h1>Sistema de Citas Médicas</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="pacientes">
+                        <i class="fas fa-users"></i>
+                        <span>Pacientes</span>
+                    </button>
+                    <button class="nav-btn" data-tab="medicos">
+                        <i class="fas fa-user-md"></i>
+                        <span>Médicos</span>
+                    </button>
+                    <button class="nav-btn" data-tab="citas">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Citas</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="main-content">
+            <!-- Sección Pacientes -->
+            <section id="pacientes" class="tab-content active">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-users"></i>
+                        <h2>Gestión de Pacientes</h2>
+                    </div>
+                    <button class="btn btn-primary" onclick="openPacienteModal()">
+                        <i class="fas fa-plus"></i>
+                        Nuevo Paciente
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="filters">
+                            <div class="search-container">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="searchPacientes" placeholder="Buscar pacientes por ID, nombre, DNI, teléfono..." class="search-input">
+                                </div>
+                                <button class="clear-search hidden" onclick="clearSearchPacientes()">
+                                    <i class="fas fa-times"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="search-hint">
+                            <i class="fas fa-lightbulb"></i>
+                            <small>Puedes buscar por cualquier campo: ID, nombre completo, DNI, teléfono o dirección</small>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th width="80px">ID</th>
+                                        <th>Nombre Completo</th>
+                                        <th width="140px">DNI</th>
+                                        <th width="120px">Teléfono</th>
+                                        <th>Dirección</th>
+                                        <th width="120px" class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pacientesTableBody">
+                                    <!-- Datos dinámicos con botones de solo icono -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Médicos -->
+            <section id="medicos" class="tab-content">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-user-md"></i>
+                        <h2>Gestión de Médicos</h2>
+                    </div>
+                    <button class="btn btn-primary" onclick="openMedicoModal()">
+                        <i class="fas fa-plus"></i>
+                        Nuevo Médico
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="filters">
+                            <div class="search-container">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="searchMedicos" placeholder="Buscar médicos por ID, nombre, especialidad..." class="search-input">
+                                </div>
+                                <button class="clear-search hidden" onclick="clearSearchMedicos()">
+                                    <i class="fas fa-times"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                            <select id="filterEspecialidad" class="select-input">
+                                <option value="">Todas las especialidades</option>
+                                <!-- Opciones dinámicas -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th width="80px">ID</th>
+                                        <th>Nombre</th>
+                                        <th>Especialidad</th>
+                                        <th width="120px">Teléfono</th>
+                                        <th width="150px">Horario</th>
+                                        <th width="120px" class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="medicosTableBody">
+                                    <!-- Datos dinámicos -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Citas -->
+            <section id="citas" class="tab-content">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-calendar-check"></i>
+                        <h2>Gestión de Citas</h2>
+                    </div>
+                    <button class="btn btn-primary" onclick="openCitaModal()">
+                        <i class="fas fa-plus"></i>
+                        Nueva Cita
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="filters">
+                            <div class="search-container">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="searchCitas" placeholder="Buscar citas por ID, paciente, médico..." class="search-input">
+                                </div>
+                                <button class="clear-search hidden" onclick="clearSearchCitas()">
+                                    <i class="fas fa-times"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                            <div class="filter-group">
+                                <input type="date" id="filterFecha" class="search-input">
+                                <select id="filterEstado" class="select-input">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="confirmada">Confirmada</option>
+                                    <option value="cancelada">Cancelada</option>
+                                    <option value="finalizada">Finalizada</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th width="80px">ID</th>
+                                        <th>Paciente</th>
+                                        <th>Médico</th>
+                                        <th width="120px">Fecha</th>
+                                        <th width="100px">Hora</th>
+                                        <th width="120px" class="text-center">Estado</th>
+                                        <th width="150px" class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="citasTableBody">
+                                    <!-- Datos dinámicos -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Spinner Mejorado -->
+        <div id="loading" class="loading hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>Procesando solicitud...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales Mejorados -->
+    
+    <!-- Modal Paciente -->
+    <div id="pacienteModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="pacienteModalTitle">
+                    <i class="fas fa-user-plus"></i>
+                    Nuevo Paciente
+                </h3>
+                <button class="modal-close" onclick="closePacienteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="pacienteForm">
+                    <input type="hidden" id="pacienteId">
+                    <div class="form-group">
+                        <label for="pacienteNombre">
+                            <i class="fas fa-user"></i>
+                            Nombre Completo:
+                        </label>
+                        <input type="text" id="pacienteNombre" required placeholder="Ingrese nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="pacienteDNI">
+                            <i class="fas fa-id-card"></i>
+                            DNI:
+                        </label>
+                        <input type="text" id="pacienteDNI" required placeholder="Ingrese número de DNI">
+                    </div>
+                    <div class="form-group">
+                        <label for="pacienteTelefono">
+                            <i class="fas fa-phone"></i>
+                            Teléfono:
+                        </label>
+                        <input type="text" id="pacienteTelefono" required placeholder="Ingrese número de teléfono">
+                    </div>
+                    <div class="form-group">
+                        <label for="pacienteDireccion">
+                            <i class="fas fa-home"></i>
+                            Dirección:
+                        </label>
+                        <textarea id="pacienteDireccion" required placeholder="Ingrese dirección completa"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="pacienteFechaNacimiento">
+                            <i class="fas fa-birthday-cake"></i>
+                            Fecha Nacimiento:
+                        </label>
+                        <input type="date" id="pacienteFechaNacimiento">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closePacienteModal()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Médico -->
+    <div id="medicoModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="medicoModalTitle">
+                    <i class="fas fa-user-md"></i>
+                    Nuevo Médico
+                </h3>
+                <button class="modal-close" onclick="closeMedicoModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="medicoForm">
+                    <input type="hidden" id="medicoId">
+                    <div class="form-group">
+                        <label for="medicoNombre">
+                            <i class="fas fa-user"></i>
+                            Nombre:
+                        </label>
+                        <input type="text" id="medicoNombre" required placeholder="Ingrese nombre del médico">
+                    </div>
+                    <div class="form-group">
+                        <label for="medicoEspecialidad">
+                            <i class="fas fa-stethoscope"></i>
+                            Especialidad:
+                        </label>
+                        <select id="medicoEspecialidad" required>
+                            <option value="">Seleccionar especialidad</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="medicoTelefono">
+                            <i class="fas fa-phone"></i>
+                            Teléfono:
+                        </label>
+                        <input type="text" id="medicoTelefono" required placeholder="Ingrese número de teléfono">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="medicoHorarioInicio">
+                                <i class="fas fa-clock"></i>
+                                Horario Inicio:
+                            </label>
+                            <input type="time" id="medicoHorarioInicio" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="medicoHorarioFin">
+                                <i class="fas fa-clock"></i>
+                                Horario Fin:
+                            </label>
+                            <input type="time" id="medicoHorarioFin" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeMedicoModal()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cita -->
+    <div id="citaModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="citaModalTitle">
+                    <i class="fas fa-calendar-plus"></i>
+                    Nueva Cita
+                </h3>
+                <button class="modal-close" onclick="closeCitaModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="citaForm">
+                    <input type="hidden" id="citaId">
+                    <div class="form-group">
+                        <label for="citaPaciente">
+                            <i class="fas fa-user-injured"></i>
+                            Paciente:
+                        </label>
+                        <select id="citaPaciente" required>
+                            <option value="">Seleccionar paciente</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="citaMedico">
+                            <i class="fas fa-user-md"></i>
+                            Médico:
+                        </label>
+                        <select id="citaMedico" required>
+                            <option value="">Seleccionar médico</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="citaFecha">
+                                <i class="fas fa-calendar"></i>
+                                Fecha:
+                            </label>
+                            <input type="date" id="citaFecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="citaHora">
+                                <i class="fas fa-clock"></i>
+                                Hora:
+                            </label>
+                            <input type="time" id="citaHora" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="citaMotivo">
+                            <i class="fas fa-file-medical"></i>
+                            Motivo:
+                        </label>
+                        <textarea id="citaMotivo" placeholder="Descripción del motivo de la cita..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeCitaModal()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación para Eliminar -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmModalTitle">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Confirmar Eliminación
+                </h3>
+                <button class="modal-close" onclick="closeConfirmModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <p id="confirmModalMessage">¿Estás seguro de que quieres eliminar este elemento?</p>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Errores Mejorado -->
+    <div id="errorModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="errorModalTitle">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Error
+                </h3>
+                <button class="modal-close" onclick="closeErrorModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="error-icon" id="errorModalIcon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <p id="errorModalMessage">Ha ocurrido un error.</p>
+                <div class="error-details" id="errorModalDetails" style="display: none;">
+                    <h4>
+                        <i class="fas fa-code"></i>
+                        Detalles técnicos:
+                    </h4>
+                    <pre id="errorModalDetailsText" class="error-details-text"></pre>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeErrorModal()">
+                        <i class="fas fa-times"></i>
+                        Cerrar
+                    </button>
+                    <button type="button" id="showDetailsBtn" class="btn btn-info" onclick="toggleErrorDetails()" style="display: none;">
+                        <i class="fas fa-code"></i>
+                        Ver detalles
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/pacientes.js' %}"></script>
+    <script src="{% static 'js/medicos.js' %}"></script>
+    <script src="{% static 'js/citas.js' %}"></script>
+</body>
+</html>
