@@ -1,28 +1,32 @@
-"""
-URL configuration for citas_medicas project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+# citas_medicas/urls.py
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
 from . import views
 
+# Vista protegida (mantenemos tu lógica)
+@login_required
+def app_protegida(request):
+    return views.frontend_app(request)
+
 urlpatterns = [
-    path('', views.api_home, name='home'),
-    path('app/', views.frontend_app, name='frontend_app'),
     path('admin/', admin.site.urls),
+    
+    # --- CAMBIO CLAVE AQUÍ ---
+    # Incluimos autenticacion.urls en la raíz (''). 
+    # Como ya definimos las rutas completas dentro de ese archivo (ej: 'login/' y 'api/autenticacion/login/'),
+    # esto funcionará perfectamente para ambos casos.
+    path('', include('autenticacion.urls')),
+    
+    # Redirección base
+    path('', lambda request: redirect('login')),
+    
+    path('app/', app_protegida, name='frontend_app'),
+    
+    # Otras APIs
     path('api/pacientes/', include('pacientes.urls')),
     path('api/medicos/', include('medicos.urls')),
     path('api/citas/', include('citas.urls')),
+    
 ]

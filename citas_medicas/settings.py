@@ -49,8 +49,10 @@ INSTALLED_APPS = [
     'pacientes',
     'medicos',
     'citas',
+    'autenticacion',  # NUEVA APP
 ]
 
+# settings.py
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -60,6 +62,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'autenticacion.middleware.LoginRequiredMiddleware',
+    'autenticacion.middleware.RolMiddleware',
 ]
 
 ROOT_URLCONF = 'citas_medicas.urls'
@@ -159,17 +163,16 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# Configuración de REST Framework
+# Configuración de autenticación REST
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Para API
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
 }
 
 # Configuración Simple JWT
@@ -204,3 +207,17 @@ LOGGING = {
         'level': 'DEBUG',
     },
 }
+
+# AGREGAR AL FINAL DE settings.py
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+LOGIN_EXEMPT_URLS = [
+    r'^login/$',
+    r'^logout/$',
+    r'^admin/',
+    r'^static/',
+    r'^api/autenticacion/login/',
+    r'^api/autenticacion/registro/',
+]
