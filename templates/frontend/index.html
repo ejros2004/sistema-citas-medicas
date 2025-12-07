@@ -7,6 +7,7 @@
     <title>🏥 Sistema de Citas Médicas</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'css/validaciones.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -27,6 +28,10 @@
                         <i class="fas fa-user-md"></i>
                         <span>Médicos</span>
                     </button>
+                    <button class="nav-btn" data-tab="especialidades">
+                        <i class="fas fa-stethoscope"></i>
+                        <span>Especialidades</span>
+                    </button>
                     <button class="nav-btn" data-tab="citas">
                         <i class="fas fa-calendar-check"></i>
                         <span>Citas</span>
@@ -43,6 +48,10 @@
                     <div class="section-title">
                         <i class="fas fa-users"></i>
                         <h2>Gestión de Pacientes</h2>
+                    </div>
+                    <div class="result-count" id="pacientesCount">
+                        <i class="fas fa-chart-bar"></i>
+                        Mostrando <span id="pacientesShowing">0</span> de <span id="pacientesTotal">0</span> pacientes
                     </div>
                     <button class="btn btn-primary" onclick="openPacienteModal()">
                         <i class="fas fa-plus"></i>
@@ -80,11 +89,11 @@
                                         <th width="140px">DNI</th>
                                         <th width="120px">Teléfono</th>
                                         <th>Dirección</th>
-                                        <th width="120px" class="text-center">Acciones</th>
+                                        <th width="140px" class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pacientesTableBody">
-                                    <!-- Datos dinámicos con botones de solo icono -->
+                                    <!-- Datos dinámicos -->
                                 </tbody>
                             </table>
                         </div>
@@ -98,6 +107,10 @@
                     <div class="section-title">
                         <i class="fas fa-user-md"></i>
                         <h2>Gestión de Médicos</h2>
+                    </div>
+                    <div class="result-count" id="medicosCount">
+                        <i class="fas fa-chart-bar"></i>
+                        Mostrando <span id="medicosShowing">0</span> de <span id="medicosTotal">0</span> médicos
                     </div>
                     <button class="btn btn-primary" onclick="openMedicoModal()">
                         <i class="fas fa-plus"></i>
@@ -135,10 +148,63 @@
                                         <th>Especialidad</th>
                                         <th width="120px">Teléfono</th>
                                         <th width="150px">Horario</th>
-                                        <th width="120px" class="text-center">Acciones</th>
+                                        <th width="140px" class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="medicosTableBody">
+                                    <!-- Datos dinámicos -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Especialidades -->
+            <section id="especialidades" class="tab-content">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-stethoscope"></i>
+                        <h2>Gestión de Especialidades</h2>
+                    </div>
+                    <div class="result-count" id="especialidadesCount">
+                        <i class="fas fa-chart-bar"></i>
+                        Mostrando <span id="especialidadesShowing">0</span> de <span id="especialidadesTotal">0</span> especialidades
+                    </div>
+                    <button class="btn btn-primary" onclick="openEspecialidadModal()">
+                        <i class="fas fa-plus"></i>
+                        Nueva Especialidad
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="filters">
+                            <div class="search-container">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="searchEspecialidades" placeholder="Buscar especialidades por nombre..." class="search-input">
+                                </div>
+                                <button class="clear-search hidden" onclick="clearSearchEspecialidades()">
+                                    <i class="fas fa-times"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th width="80px">ID</th>
+                                        <th>Nombre</th>
+                                        <th>Descripción</th>
+                                        <th width="150px" class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="especialidadesTableBody">
                                     <!-- Datos dinámicos -->
                                 </tbody>
                             </table>
@@ -153,6 +219,10 @@
                     <div class="section-title">
                         <i class="fas fa-calendar-check"></i>
                         <h2>Gestión de Citas</h2>
+                    </div>
+                    <div class="result-count" id="citasCount">
+                        <i class="fas fa-chart-bar"></i>
+                        Mostrando <span id="citasShowing">0</span> de <span id="citasTotal">0</span> citas
                     </div>
                     <button class="btn btn-primary" onclick="openCitaModal()">
                         <i class="fas fa-plus"></i>
@@ -196,8 +266,9 @@
                                         <th>Médico</th>
                                         <th width="120px">Fecha</th>
                                         <th width="100px">Hora</th>
+                                        <th>Motivo</th>
                                         <th width="120px" class="text-center">Estado</th>
-                                        <th width="150px" class="text-center">Acciones</th>
+                                        <th width="200px" class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="citasTableBody">
@@ -239,37 +310,51 @@
                     <div class="form-group">
                         <label for="pacienteNombre">
                             <i class="fas fa-user"></i>
-                            Nombre Completo:
+                            Nombre Completo: *
                         </label>
-                        <input type="text" id="pacienteNombre" required placeholder="Ingrese nombre completo">
+                        <input type="text" id="pacienteNombre" required 
+                               placeholder="Ingrese nombre completo (solo letras)"
+                               oninput="validarNombre(this)">
+                        <small class="validation-hint">Solo letras y espacios (mínimo 3 caracteres)</small>
                     </div>
                     <div class="form-group">
                         <label for="pacienteDNI">
                             <i class="fas fa-id-card"></i>
-                            DNI:
+                            DNI: *
                         </label>
-                        <input type="text" id="pacienteDNI" required placeholder="Ingrese número de DNI">
+                        <input type="text" id="pacienteDNI" required 
+                               placeholder="Formato: 001-010101-1000A"
+                               oninput="validarDNI(this)">
+                        <small class="validation-hint">Formato: 000-000000-0000A</small>
                     </div>
                     <div class="form-group">
                         <label for="pacienteTelefono">
                             <i class="fas fa-phone"></i>
-                            Teléfono:
+                            Teléfono: *
                         </label>
-                        <input type="text" id="pacienteTelefono" required placeholder="Ingrese número de teléfono">
+                        <input type="text" id="pacienteTelefono" required 
+                               placeholder="8 dígitos"
+                               oninput="validarTelefono(this)">
+                        <small class="validation-hint">8 dígitos numéricos</small>
                     </div>
                     <div class="form-group">
                         <label for="pacienteDireccion">
                             <i class="fas fa-home"></i>
-                            Dirección:
+                            Dirección: *
                         </label>
-                        <textarea id="pacienteDireccion" required placeholder="Ingrese dirección completa"></textarea>
+                        <textarea id="pacienteDireccion" required 
+                                  placeholder="Ingrese dirección completa"
+                                  oninput="validarDireccion(this)"></textarea>
+                        <small class="validation-hint">Mínimo 10 caracteres</small>
                     </div>
                     <div class="form-group">
                         <label for="pacienteFechaNacimiento">
                             <i class="fas fa-birthday-cake"></i>
                             Fecha Nacimiento:
                         </label>
-                        <input type="date" id="pacienteFechaNacimiento">
+                        <input type="date" id="pacienteFechaNacimiento"
+                               onchange="validarFechaNacimiento(this)">
+                        <small class="validation-hint">Debe ser una fecha pasada</small>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closePacienteModal()">
@@ -304,14 +389,17 @@
                     <div class="form-group">
                         <label for="medicoNombre">
                             <i class="fas fa-user"></i>
-                            Nombre:
+                            Nombre: *
                         </label>
-                        <input type="text" id="medicoNombre" required placeholder="Ingrese nombre del médico">
+                        <input type="text" id="medicoNombre" required 
+                               placeholder="Ingrese nombre del médico"
+                               oninput="validarNombre(this)">
+                        <small class="validation-hint">Solo letras y espacios (mínimo 3 caracteres)</small>
                     </div>
                     <div class="form-group">
                         <label for="medicoEspecialidad">
                             <i class="fas fa-stethoscope"></i>
-                            Especialidad:
+                            Especialidad: *
                         </label>
                         <select id="medicoEspecialidad" required>
                             <option value="">Seleccionar especialidad</option>
@@ -321,28 +409,83 @@
                     <div class="form-group">
                         <label for="medicoTelefono">
                             <i class="fas fa-phone"></i>
-                            Teléfono:
+                            Teléfono: *
                         </label>
-                        <input type="text" id="medicoTelefono" required placeholder="Ingrese número de teléfono">
+                        <input type="text" id="medicoTelefono" required 
+                               placeholder="8 dígitos"
+                               oninput="validarTelefono(this)">
+                        <small class="validation-hint">8 dígitos numéricos</small>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="medicoHorarioInicio">
                                 <i class="fas fa-clock"></i>
-                                Horario Inicio:
+                                Horario Inicio: *
                             </label>
-                            <input type="time" id="medicoHorarioInicio" required>
+                            <input type="time" id="medicoHorarioInicio" required
+                                   onchange="validarHorarioMedico()">
                         </div>
                         <div class="form-group">
                             <label for="medicoHorarioFin">
                                 <i class="fas fa-clock"></i>
-                                Horario Fin:
+                                Horario Fin: *
                             </label>
-                            <input type="time" id="medicoHorarioFin" required>
+                            <input type="time" id="medicoHorarioFin" required
+                                   onchange="validarHorarioMedico()">
                         </div>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeMedicoModal()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Especialidad -->
+    <div id="especialidadModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="especialidadModalTitle">
+                    <i class="fas fa-stethoscope"></i>
+                    Nueva Especialidad
+                </h3>
+                <button class="modal-close" onclick="closeEspecialidadModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="especialidadForm">
+                    <input type="hidden" id="especialidadId">
+                    <div class="form-group">
+                        <label for="especialidadNombre">
+                            <i class="fas fa-tag"></i>
+                            Nombre: *
+                        </label>
+                        <input type="text" id="especialidadNombre" required 
+                               placeholder="Ingrese nombre de la especialidad"
+                               oninput="validarNombreEspecialidad(this)">
+                        <small class="validation-hint">Solo letras y espacios (3-100 caracteres)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="especialidadDescripcion">
+                            <i class="fas fa-file-alt"></i>
+                            Descripción:
+                        </label>
+                        <textarea id="especialidadDescripcion" 
+                                  placeholder="Ingrese descripción de la especialidad..."
+                                  maxlength="500"></textarea>
+                        <small class="validation-hint">Máximo 500 caracteres</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEspecialidadModal()">
                             <i class="fas fa-times"></i>
                             Cancelar
                         </button>
@@ -374,7 +517,7 @@
                     <div class="form-group">
                         <label for="citaPaciente">
                             <i class="fas fa-user-injured"></i>
-                            Paciente:
+                            Paciente: *
                         </label>
                         <select id="citaPaciente" required>
                             <option value="">Seleccionar paciente</option>
@@ -384,9 +527,9 @@
                     <div class="form-group">
                         <label for="citaMedico">
                             <i class="fas fa-user-md"></i>
-                            Médico:
+                            Médico: *
                         </label>
-                        <select id="citaMedico" required>
+                        <select id="citaMedico" required onchange="actualizarHorarioMedico()">
                             <option value="">Seleccionar médico</option>
                             <!-- Opciones dinámicas -->
                         </select>
@@ -395,16 +538,19 @@
                         <div class="form-group">
                             <label for="citaFecha">
                                 <i class="fas fa-calendar"></i>
-                                Fecha:
+                                Fecha: *
                             </label>
-                            <input type="date" id="citaFecha" required>
+                            <input type="date" id="citaFecha" required 
+                                   min="" onchange="validarFechaCita()">
                         </div>
                         <div class="form-group">
                             <label for="citaHora">
                                 <i class="fas fa-clock"></i>
-                                Hora:
+                                Hora: *
                             </label>
-                            <input type="time" id="citaHora" required>
+                            <input type="time" id="citaHora" required 
+                                   step="1800" onchange="validarHoraCita()">
+                            <small class="validation-hint">Intervalos de 30 minutos</small>
                         </div>
                     </div>
                     <div class="form-group">
@@ -412,7 +558,10 @@
                             <i class="fas fa-file-medical"></i>
                             Motivo:
                         </label>
-                        <textarea id="citaMotivo" placeholder="Descripción del motivo de la cita..."></textarea>
+                        <textarea id="citaMotivo" 
+                                  placeholder="Descripción del motivo de la cita..."
+                                  maxlength="500"></textarea>
+                        <small class="validation-hint">Máximo 500 caracteres</small>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeCitaModal()">
@@ -501,6 +650,8 @@
     <script src="{% static 'js/app.js' %}"></script>
     <script src="{% static 'js/pacientes.js' %}"></script>
     <script src="{% static 'js/medicos.js' %}"></script>
+    <script src="{% static 'js/especialidades.js' %}"></script>
     <script src="{% static 'js/citas.js' %}"></script>
+    <script src="{% static 'js/validaciones.js' %}"></script>
 </body>
 </html>
