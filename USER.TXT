@@ -1,0 +1,23 @@
+USUARIOS Y CONTRASEÑAS DEL SISTEMA
+🏥 ADMINISTRADORES (SUPERUSERS)
+Usuario	Contraseña	Rol	Descripción
+ejro2004	admin123	👑 Admin	Superusuario principal
+jero2004	admin123	👑 Admin	Superusuario secundario
+
+👨‍⚕️ MÉDICOS (Contraseña: 12345)
+Usuario	Nombre	Especialidad	Horario
+dra.garcia	Dra. Ana García	Medicina General	08:00 - 16:00
+dr.martinez	Dr. Carlos Martínez	Cardiología	09:00 - 17:00
+dra.lopez	Dra. María López	Pediatría	08:30 - 15:30
+dr.rodriguez	Dr. José Rodríguez	Dermatología	10:00 - 18:00
+dra.hernandez	Dra. Laura Hernández	Ginecología	07:00 - 14:00
+dr_house	Dr. Gregory House	Medicina General	13:00 - 21:00
+
+👤 PACIENTES (Contraseña: 12345)
+Usuario	Nombre	DNI	Edad	Ciudad
+juan.perez	Juan Pérez	001-123456-1000A	39	Managua
+maria.gonzalez	María González	001-123456-1001B	34	Granada
+carlos.ramirez	Carlos Ramírez	001-123456-1002C	46	León
+ana.silva	Ana Silva	001-123456-1003D	29	Masaya
+roberto.diaz	Roberto Díaz	001-123456-1004E	42	Chinandega
+sofia.castro	Sofía Castro	001-123456-1005F	24	Estelí

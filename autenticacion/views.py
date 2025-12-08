@@ -1,4 +1,4 @@
-# autenticacion/views.py
+# autenticacion/views.py - VERSIÓN CORREGIDA SIN DUPLICADOS
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -23,18 +23,43 @@ logger = logging.getLogger(__name__)
 
 def login_view(request):
     """Vista para renderizar la página de login"""
-    if request.user.is_authenticated:
-        # Redirigir según el tipo de usuario
-        if hasattr(request.user, 'perfil'):
-            return redirect_por_rol(request.user.perfil.tipo_usuario)
-        return redirect('/')
+    print(f"🔐 LoginView HTML accedida por: {request.user} - Autenticado: {request.user.is_authenticated}")
     
+    # Si ya está autenticado, redirigir a la app
+    if request.user.is_authenticated:
+        print(f"✅ Usuario ya autenticado ({request.user.username}), redirigiendo a /app/")
+        return redirect('/app/')
+    
+    # Si es POST, procesar login tradicional (formulario HTML)
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        print(f"📝 Intento de login HTML: {username}")
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            print(f"✅ Login HTML exitoso para {username}")
+            
+            # Redirigir a la aplicación
+            return redirect('/app/')
+        else:
+            # Credenciales inválidas
+            print(f"❌ Credenciales inválidas para {username}")
+            return render(request, 'autenticacion/login.html', {
+                'error': 'Credenciales inválidas. Intenta nuevamente.'
+            })
+    
+    # GET request → mostrar formulario de login
     return render(request, 'autenticacion/login.html')
 
 def logout_view(request):
     """Vista para cerrar sesión"""
+    print(f"👋 Logout de {request.user.username}")
     logout(request)
-    return redirect('login')
+    return redirect('/login/')
 
 @login_required
 def dashboard_view(request):
@@ -50,6 +75,14 @@ class LoginAPIView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
+            
+            # Asegurar que superusers tengan tipo_usuario = 'admin'
+            if user.is_superuser:
+                perfil, created = PerfilUsuario.objects.get_or_create(user=user)
+                if perfil.tipo_usuario != 'admin':
+                    perfil.tipo_usuario = 'admin'
+                    perfil.save()
+                    logger.info(f"✅ Superuser {user.username} configurado como admin")
             
             # Generar tokens JWT
             refresh = RefreshToken.for_user(user)
@@ -264,8 +297,16 @@ def paciente_required(view_func):
 def verificar_autenticacion(request):
     """Verifica si el usuario está autenticado y devuelve su información"""
     user = request.user
-    perfil_data = {}
     
+    # Asegurar que superusers tengan tipo_usuario = 'admin'
+    if user.is_superuser:
+        perfil, created = PerfilUsuario.objects.get_or_create(user=user)
+        if perfil.tipo_usuario != 'admin':
+            perfil.tipo_usuario = 'admin'
+            perfil.save()
+            logger.info(f"✅ Superuser {user.username} corregido a admin en verificación")
+    
+    perfil_data = {}
     if hasattr(user, 'perfil'):
         perfil_data = PerfilUsuarioSerializer(user.perfil).data
     
@@ -274,3 +315,61 @@ def verificar_autenticacion(request):
         'user': UserSerializer(user).data,
         'perfil': perfil_data
     })
+
+# ==================== VISTA DE DEPURACIÓN ====================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def debug_info(request):
+    """Vista de depuración para verificar permisos y perfiles"""
+    from django.contrib.auth.models import User
+    from pacientes.models import Paciente
+    from medicos.models import Medico
+    from citas.models import Cita
+    
+    info = {
+        'request_user': request.user.username if request.user.is_authenticated else 'No autenticado',
+        'is_authenticated': request.user.is_authenticated,
+        'is_superuser': request.user.is_superuser if request.user.is_authenticated else False,
+        'total_users': User.objects.count(),
+        'total_pacientes': Paciente.objects.count(),
+        'total_medicos': Medico.objects.count(),
+        'total_citas': Cita.objects.count(),
+    }
+    
+    if request.user.is_authenticated:
+        # Información del perfil
+        if hasattr(request.user, 'perfil'):
+            info['perfil'] = {
+                'tipo_usuario': request.user.perfil.tipo_usuario,
+                'perfil_id': request.user.perfil.id,
+                'telefono': request.user.perfil.telefono,
+            }
+        
+        # Si es paciente, verificar si tiene objeto Paciente
+        if hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'paciente':
+            try:
+                paciente = Paciente.objects.get(user=request.user)
+                info['paciente_info'] = {
+                    'id': paciente.id,
+                    'dni': paciente.dni,
+                    'has_citas': Cita.objects.filter(paciente=paciente).exists(),
+                    'citas_count': Cita.objects.filter(paciente=paciente).count(),
+                }
+            except Paciente.DoesNotExist:
+                info['paciente_info'] = 'ERROR: No tiene objeto Paciente'
+        
+        # Si es médico, verificar si tiene objeto Medico
+        if hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'medico':
+            try:
+                medico = Medico.objects.get(user=request.user)
+                info['medico_info'] = {
+                    'id': medico.id,
+                    'especialidad': medico.especialidad.nombre if medico.especialidad else 'Sin especialidad',
+                    'has_citas': Cita.objects.filter(medico=medico).exists(),
+                    'citas_count': Cita.objects.filter(medico=medico).count(),
+                }
+            except Medico.DoesNotExist:
+                info['medico_info'] = 'ERROR: No tiene objeto Medico'
+    
+    return Response(info)

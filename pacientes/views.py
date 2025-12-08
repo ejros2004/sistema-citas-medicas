@@ -1,30 +1,93 @@
-from rest_framework import viewsets, status
+# pacientes/views.py - VERSIÓN COMPLETA FINAL
+from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated, BasePermission
+from django.db import transaction
+import logging
 from .models import Paciente
 from .serializers import PacienteSerializer
-from django.db import transaction
-import requests
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 
+# ==================== PERMISOS PERSONALIZADOS ====================
+
+class PermisoPacientes(BasePermission):
+    """Permiso personalizado para operaciones de pacientes"""
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        
+        # Admin puede ver/editar/eliminar todos los pacientes
+        # Paciente solo puede ver su propio perfil
+        return hasattr(request.user, 'perfil')
+    
+    def has_object_permission(self, request, view, obj):
+        """Permisos a nivel de objeto"""
+        if not request.user.is_authenticated:
+            return False
+        
+        # Admin puede hacer todo
+        if request.user.perfil.tipo_usuario == 'admin':
+            return True
+        
+        # Paciente solo puede ver/editar su propio perfil
+        if request.user.perfil.tipo_usuario == 'paciente':
+            return obj.user == request.user
+        
+        return False
+
+# ==================== VIEWSET ====================
+
 class PacienteViewSet(viewsets.ModelViewSet):
-    permission_classes = [AllowAny]
-    queryset = Paciente.objects.all().select_related('user')
     serializer_class = PacienteSerializer
+    permission_classes = [IsAuthenticated, PermisoPacientes]
+    
+    def get_queryset(self):
+        """Filtrar pacientes según el rol del usuario"""
+        user = self.request.user
+        
+        if not user.is_authenticated:
+            return Paciente.objects.none()
+        
+        # Admin ve todos los pacientes
+        if hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'admin':
+            return Paciente.objects.all().select_related('user')
+        
+        # Paciente ve solo su propio perfil
+        if hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'paciente':
+            try:
+                return Paciente.objects.filter(user=user).select_related('user')
+            except Paciente.DoesNotExist:
+                return Paciente.objects.none()
+        
+        # Médico no debería ver pacientes directamente desde aquí
+        return Paciente.objects.none()
     
     def list(self, request, *args, **kwargs):
         """
-        Listar todos los pacientes
+        Listar todos los pacientes (solo admin) o solo el propio (paciente)
         """
         try:
-            logger.info("📋 LIST pacientes solicitado")
+            logger.info(f"📋 LIST pacientes solicitado por {request.user.username} ({request.user.perfil.tipo_usuario})")
+            
+            # Si es paciente, mostrar solo su perfil
+            if request.user.perfil.tipo_usuario == 'paciente':
+                try:
+                    paciente = Paciente.objects.get(user=request.user)
+                    serializer = self.get_serializer(paciente)
+                    logger.info(f"👤 Paciente viendo su propio perfil - ID: {paciente.id}")
+                    # Retornar como array con un solo elemento
+                    return Response([serializer.data])
+                except Paciente.DoesNotExist:
+                    logger.warning(f"⚠️ Paciente {request.user.username} no tiene perfil de paciente")
+                    return Response([], status=status.HTTP_200_OK)
+            
+            # Admin ve todos
             pacientes = self.get_queryset()
             serializer = self.get_serializer(pacientes, many=True)
-            logger.info(f"✅ Retornando {len(serializer.data)} pacientes")
+            logger.info(f"✅ Retornando {len(serializer.data)} pacientes para admin")
             return Response(serializer.data)
+            
         except Exception as e:
             logger.error(f"❌ Error obteniendo pacientes: {str(e)}")
             return Response(
@@ -32,13 +95,35 @@ class PacienteViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Obtener un paciente específico
+        """
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo paciente: {str(e)}")
+            return Response(
+                {'error': f'Error al obtener paciente: {str(e)}'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
     def create(self, request, *args, **kwargs):
         """
         Crear paciente con rollback automático en caso de error
         """
         try:
-            logger.info("➕ CREATE paciente solicitado")
+            logger.info(f"➕ CREATE paciente solicitado por {request.user.username}")
             logger.info(f"📦 Datos recibidos: {request.data}")
+            
+            # Solo admin puede crear pacientes
+            if not hasattr(request.user, 'perfil') or request.user.perfil.tipo_usuario != 'admin':
+                return Response(
+                    {'error': 'Solo los administradores pueden crear pacientes'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             with transaction.atomic():
                 # Validar y crear paciente
@@ -63,23 +148,14 @@ class PacienteViewSet(viewsets.ModelViewSet):
         """
         try:
             instance = self.get_object()
-            logger.info(f"✏️ UPDATE paciente {instance.id} solicitado")
-            logger.info(f"📦 Datos antes: DNI={instance.dni}, Tel={instance.telefono}, Dir={instance.direccion}")
-            logger.info(f"📦 Datos recibidos: {request.data}")
+            logger.info(f"✏️ UPDATE paciente {instance.id} solicitado por {request.user.username}")
             
             with transaction.atomic():
                 serializer = self.get_serializer(instance, data=request.data, partial=False)
                 serializer.is_valid(raise_exception=True)
                 paciente = serializer.save()
                 
-                # Refrescar desde BD para ver cambios reales
-                paciente.refresh_from_db()
                 logger.info(f"✅ Paciente actualizado - ID: {paciente.id}")
-                logger.info(f"📦 Datos después: DNI={paciente.dni}, Tel={paciente.telefono}, Dir={paciente.direccion}")
-                
-                # Si se cambió el nombre, mostrar info del usuario
-                if 'nombre' in request.data:
-                    logger.info(f"👤 Usuario actualizado: {paciente.user.first_name} {paciente.user.last_name}")
                 
                 return Response(serializer.data)
                 
@@ -92,11 +168,18 @@ class PacienteViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Eliminar paciente
+        Eliminar paciente (solo admin)
         """
         try:
             instance = self.get_object()
-            logger.info(f"🗑️ DELETE paciente {instance.id} solicitado")
+            logger.info(f"🗑️ DELETE paciente {instance.id} solicitado por {request.user.username}")
+            
+            # Solo admin puede eliminar pacientes
+            if not hasattr(request.user, 'perfil') or request.user.perfil.tipo_usuario != 'admin':
+                return Response(
+                    {'error': 'Solo los administradores pueden eliminar pacientes'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             with transaction.atomic():
                 paciente_id = instance.id

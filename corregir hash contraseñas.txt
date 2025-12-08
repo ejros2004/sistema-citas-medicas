@@ -1,0 +1,88 @@
+python manage.py shell
+
+from django.contrib.auth.models import User
+from autenticacion.models import PerfilUsuario
+import sys
+
+print("=" * 60)
+print("CORRECCIÓN DE PERFILES DE USUARIO")
+print("=" * 60)
+
+# 1. Corregir todos los superusers
+superusers = User.objects.filter(is_superuser=True)
+print(f"\n📋 Superusers encontrados: {superusers.count()}")
+
+for user in superusers:
+    try:
+        perfil, created = PerfilUsuario.objects.get_or_create(user=user)
+        
+        if created:
+            perfil.tipo_usuario = 'admin'
+            perfil.save()
+            print(f"✅ PERFIL CREADO: {user.username} -> ADMIN")
+        elif perfil.tipo_usuario != 'admin':
+            old_type = perfil.tipo_usuario
+            perfil.tipo_usuario = 'admin'
+            perfil.save()
+            print(f"🔄 CORREGIDO: {user.username} de {old_type.upper()} -> ADMIN")
+        else:
+            print(f"✓ OK: {user.username} ya es ADMIN")
+            
+    except Exception as e:
+        print(f"❌ ERROR con {user.username}: {str(e)}")
+
+# 2. Corregir usuarios normales
+normal_users = User.objects.filter(is_superuser=False)
+print(f"\n📋 Usuarios normales encontrados: {normal_users.count()}")
+
+for user in normal_users:
+    try:
+        # Solo crear si no existe
+        perfil, created = PerfilUsuario.objects.get_or_create(user=user)
+        if created:
+            # Mantener el valor por defecto (paciente)
+            print(f"✅ PERFIL CREADO: {user.username} -> {perfil.tipo_usuario.upper()}")
+        else:
+            print(f"✓ OK: {user.username} ya tiene perfil ({perfil.tipo_usuario})")
+    except Exception as e:
+        print(f"❌ ERROR con {user.username}: {str(e)}")
+
+# 3. Verificar usuarios sin perfil
+print(f"\n🔍 Verificando usuarios sin perfil...")
+users_without_profile = []
+for user in User.objects.all():
+    try:
+        user.perfil  # Intentar acceder al perfil
+    except PerfilUsuario.DoesNotExist:
+        users_without_profile.append(user.username)
+
+if users_without_profile:
+    print(f"⚠️ Usuarios sin perfil encontrados: {len(users_without_profile)}")
+    for username in users_without_profile:
+        print(f"   - {username}")
+        
+    # Crear perfiles para los que faltan
+    print("\n🛠️ Creando perfiles faltantes...")
+    for username in users_without_profile:
+        user = User.objects.get(username=username)
+        try:
+            if user.is_superuser:
+                PerfilUsuario.objects.create(user=user, tipo_usuario='admin')
+                print(f"   ✅ {username} -> ADMIN (creado)")
+            else:
+                PerfilUsuario.objects.create(user=user)
+                print(f"   ✅ {username} -> PACIENTE (creado)")
+        except Exception as e:
+            print(f"   ❌ Error creando perfil para {username}: {str(e)}")
+else:
+    print("✅ Todos los usuarios tienen perfil")
+
+print("\n" + "=" * 60)
+print("CORRECCIÓN COMPLETADA")
+print("=" * 60)
+
+# Mostrar resumen final
+print("\n📊 RESUMEN FINAL DE PERFILES:")
+for perfil in PerfilUsuario.objects.all().select_related('user'):
+    superuser_marker = "👑 " if perfil.user.is_superuser else "  "
+    print(f"{superuser_marker}{perfil.user.username:20} -> {perfil.tipo_usuario.upper():10} (Superuser: {perfil.user.is_superuser})")

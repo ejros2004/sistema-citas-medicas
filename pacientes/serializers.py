@@ -1,15 +1,20 @@
 from rest_framework import serializers
 from .models import Paciente
 from django.contrib.auth.models import User
+import re
 
 class PacienteSerializer(serializers.ModelSerializer):
-    nombre = serializers.CharField(write_only=True, required=False)  # Para crear desde frontend
+    nombre = serializers.CharField(write_only=True, required=True)
     user_id = serializers.IntegerField(source='user.id', read_only=True)
     nombre_completo = serializers.SerializerMethodField(read_only=True)
+    password = serializers.CharField(write_only=True, required=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True, required=True)
     
     class Meta:
         model = Paciente
-        fields = ['id', 'user_id', 'nombre_completo', 'nombre', 'dni', 'telefono', 'direccion', 'fecha_nacimiento']
+        fields = ['id', 'user_id', 'nombre_completo', 'nombre', 'dni', 
+                 'telefono', 'direccion', 'fecha_nacimiento',
+                 'password', 'confirm_password']
         read_only_fields = ['id', 'user_id', 'nombre_completo']
         extra_kwargs = {
             'dni': {'required': True},
@@ -24,43 +29,88 @@ class PacienteSerializer(serializers.ModelSerializer):
             return nombre_completo if nombre_completo else f"Usuario {obj.user.id}"
         return "Usuario no asignado"
 
+    def validate(self, data):
+        # Validar que las contraseñas coincidan
+        if data.get('password') != data.get('confirm_password'):
+            raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+        
+        # Validar DNI único
+        dni = data.get('dni')
+        if dni and Paciente.objects.filter(dni=dni).exists():
+            raise serializers.ValidationError({"dni": "Ya existe un paciente con este DNI."})
+        
+        # Validar formato DNI
+        dni_regex = r'^\d{3}-\d{6}-\d{4}[A-Z]?$'
+        if not re.match(dni_regex, dni):
+            raise serializers.ValidationError({"dni": "Formato de DNI inválido. Use: 000-000000-0000A"})
+        
+        # Validar nombre de usuario único se hará en create()
+        
+        return data
+
     def create(self, validated_data):
         """
         Crear paciente automáticamente con usuario
         """
-        # Extraer el nombre del frontend
-        nombre = validated_data.pop('nombre', None)
+        # Extraer datos
+        nombre = validated_data.pop('nombre')
+        dni = validated_data.pop('dni')
+        password = validated_data.pop('password')
+        validated_data.pop('confirm_password')  # No se usa
         
-        if not nombre:
-            raise serializers.ValidationError({"nombre": "Este campo es requerido para crear un paciente."})
+        # Generar username único: "primernombre.apellido" con número si existe
+        nombres = nombre.split(' ')
+        if len(nombres) >= 2:
+            base_username = f"{nombres[0].lower()}.{nombres[1].lower()}"
+        else:
+            base_username = nombres[0].lower()
         
-        # Verificar si el DNI ya existe
-        dni = validated_data['dni']
-        if Paciente.objects.filter(dni=dni).exists():
-            raise serializers.ValidationError({"dni": "Ya existe un paciente con este DNI."})
+        # Verificar si el username ya existe y generar uno único
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
         
         # Crear usuario automáticamente
-        username = f"paciente_{dni}"
         user = User.objects.create_user(
             username=username,
-            password='TempPassword123!',  # Password temporal
+            password=password,
             first_name=nombre.split(' ')[0] if ' ' in nombre else nombre,
             last_name=nombre.split(' ')[1] if ' ' in nombre else '',
-            email=f"{username}@clinica.com"
+            email=f"{username}@clinica.com"  # Email ficticio pero requerido por Django
         )
         
         # Crear el paciente
         paciente = Paciente.objects.create(user=user, **validated_data)
+        
+        # Actualizar perfil con tipo paciente
+        from autenticacion.models import PerfilUsuario
+        if hasattr(user, 'perfil'):
+            user.perfil.tipo_usuario = 'paciente'
+            user.perfil.save()
+        
         return paciente
 
     def update(self, instance, validated_data):
         """
         Actualizar paciente - PERMITE actualizar el nombre del usuario
         """
-        # Extraer el nombre si viene para actualizar el usuario
+        # Extraer datos
         nombre = validated_data.pop('nombre', None)
+        password = validated_data.pop('password', None)
+        confirm_password = validated_data.pop('confirm_password', None)
+        dni = validated_data.get('dni', instance.dni)
         
-        # Si viene nombre, actualizar el usuario asociado
+        # Actualizar password si se proporciona
+        if password:
+            if password != confirm_password:
+                raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+            user = instance.user
+            user.set_password(password)
+            user.save()
+        
+        # Actualizar nombre si viene para actualizar el usuario
         if nombre:
             user = instance.user
             user.first_name = nombre.split(' ')[0] if ' ' in nombre else nombre
@@ -68,10 +118,14 @@ class PacienteSerializer(serializers.ModelSerializer):
             user.save()
         
         # Validar DNI único (excluyendo el actual)
-        dni = validated_data.get('dni')
         if dni and dni != instance.dni:
             if Paciente.objects.filter(dni=dni).exclude(id=instance.id).exists():
                 raise serializers.ValidationError({"dni": "Ya existe un paciente con este DNI."})
+            
+            # Actualizar username si cambia el DNI
+            user = instance.user
+            user.username = f"paciente_{dni}"
+            user.save()
         
         # Actualizar campos del paciente
         for attr, value in validated_data.items():

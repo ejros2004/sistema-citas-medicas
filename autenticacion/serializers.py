@@ -3,6 +3,9 @@ from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate
 from .models import PerfilUsuario
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserSerializer(serializers.ModelSerializer):
     tipo_usuario = serializers.CharField(source='perfil.tipo_usuario', read_only=True)
@@ -23,16 +26,31 @@ class LoginSerializer(serializers.Serializer):
         username = data.get('username')
         password = data.get('password')
         
+        logger.info(f"Intento de login para usuario: {username}")
+        
         if username and password:
             user = authenticate(username=username, password=password)
             
             if user:
                 if not user.is_active:
+                    logger.warning(f"Usuario {username} desactivado")
                     raise serializers.ValidationError("Usuario desactivado.")
+                
+                # VERIFICAR Y CREAR PERFIL SI NO EXISTE
+                if not hasattr(user, 'perfil'):
+                    logger.warning(f"Usuario {username} no tiene perfil. Creando...")
+                    try:
+                        PerfilUsuario.objects.create(user=user)
+                    except Exception as e:
+                        logger.error(f"Error creando perfil: {str(e)}")
+                
                 data['user'] = user
+                logger.info(f"Login exitoso para {username}")
             else:
+                logger.warning(f"Credenciales inválidas para {username}")
                 raise serializers.ValidationError("Credenciales inválidas.")
         else:
+            logger.warning("Faltan credenciales")
             raise serializers.ValidationError("Debe proporcionar username y password.")
         
         return data

@@ -3,73 +3,103 @@ from rest_framework import serializers
 from .models import Cita
 from pacientes.models import Paciente
 from medicos.models import Medico
+from django.utils import timezone
+from datetime import datetime, timedelta
 
 class CitaSerializer(serializers.ModelSerializer):
     paciente_nombre = serializers.SerializerMethodField()
+    paciente_dni = serializers.CharField(source='paciente.dni', read_only=True)
     medico_nombre = serializers.SerializerMethodField()
-    paciente_id = serializers.IntegerField(source='paciente.id', read_only=True)
-    medico_id = serializers.IntegerField(source='medico.id', read_only=True)
+    especialidad_nombre = serializers.CharField(source='medico.especialidad.nombre', read_only=True)
+    fecha_str = serializers.SerializerMethodField()
+    hora_str = serializers.SerializerMethodField()
     
     class Meta:
         model = Cita
         fields = [
-            'id', 'paciente', 'medico', 'paciente_id', 'medico_id',
-            'paciente_nombre', 'medico_nombre', 'fecha', 'hora', 
-            'motivo', 'estado', 'creada_en'
+            'id', 'paciente', 'medico', 'fecha', 'hora', 'motivo', 'estado', 
+            'paciente_nombre', 'paciente_dni', 'medico_nombre', 'especialidad_nombre',
+            'fecha_str', 'hora_str', 'creada_en'
         ]
-        read_only_fields = ['id', 'estado', 'paciente_nombre', 'medico_nombre', 
-                          'paciente_id', 'medico_id', 'creada_en']
-
+        read_only_fields = ['id', 'estado', 'creada_en']
+    
     def get_paciente_nombre(self, obj):
         if obj.paciente and obj.paciente.user:
-            return f"{obj.paciente.user.first_name} {obj.paciente.user.last_name}"
-        return "Paciente no encontrado"
-
+            return f"{obj.paciente.user.first_name} {obj.paciente.user.last_name}".strip()
+        return "Sin nombre"
+    
     def get_medico_nombre(self, obj):
         if obj.medico and obj.medico.user:
-            return f"Dr. {obj.medico.user.first_name} {obj.medico.user.last_name}"
-        return "Médico no encontrado"
-
+            return f"Dr. {obj.medico.user.first_name} {obj.medico.user.last_name}".strip()
+        return "Sin médico"
+    
+    def get_fecha_str(self, obj):
+        if obj.fecha:
+            return obj.fecha.strftime('%d/%m/%Y')
+        return ""
+    
+    def get_hora_str(self, obj):
+        if obj.hora:
+            return obj.hora.strftime('%I:%M %p')
+        return ""
+    
     def validate(self, data):
-        # Validar que el médico exista
-        medico = data.get('medico')
-        if not Medico.objects.filter(id=medico.id).exists():
-            raise serializers.ValidationError({"medico": "El médico no existe."})
-
-        # Validar que el paciente exista
-        paciente = data.get('paciente')
-        if not Paciente.objects.filter(id=paciente.id).exists():
-            raise serializers.ValidationError({"paciente": "El paciente no existe."})
-
-        # Validar horario único para el médico
-        fecha = data.get('fecha')
-        hora = data.get('hora')
+        # Validar que la fecha no sea en el pasado
+        fecha_cita = data.get('fecha')
+        hora_cita = data.get('hora')
         
-        if self.instance:
-            citas_existentes = Cita.objects.filter(
-                medico=medico, 
-                fecha=fecha, 
-                hora=hora
-            ).exclude(id=self.instance.id)
-        else:
-            citas_existentes = Cita.objects.filter(
-                medico=medico, 
-                fecha=fecha, 
-                hora=hora
+        if fecha_cita and hora_cita:
+            ahora = timezone.now()
+            fecha_hora_cita = timezone.make_aware(
+                datetime.combine(fecha_cita, hora_cita)
             )
+            
+            if fecha_hora_cita < ahora:
+                raise serializers.ValidationError({
+                    'fecha': 'No se pueden crear citas en el pasado'
+                })
+            
+            # Validar que el médico exista
+            medico = data.get('medico')
+            if medico:
+                try:
+                    medico_obj = Medico.objects.get(id=medico.id if hasattr(medico, 'id') else medico)
+                    
+                    # Verificar si ya existe una cita en ese horario
+                    cita_existente = Cita.objects.filter(
+                        medico=medico_obj,
+                        fecha=fecha_cita,
+                        hora=hora_cita,
+                        estado__in=['pendiente', 'confirmada']
+                    )
+                    
+                    # Excluir la cita actual si se está editando
+                    if self.instance:
+                        cita_existente = cita_existente.exclude(id=self.instance.id)
+                    
+                    if cita_existente.exists():
+                        raise serializers.ValidationError({
+                            'hora': 'El médico ya tiene una cita programada en este horario'
+                        })
+                    
+                    # Validar horario del médico
+                    if hora_cita < medico_obj.horario_inicio or hora_cita > medico_obj.horario_fin:
+                        raise serializers.ValidationError({
+                            'hora': f'El médico solo atiende de {medico_obj.horario_inicio.strftime("%I:%M %p")} a {medico_obj.horario_fin.strftime("%I:%M %p")}'
+                        })
+                        
+                except Medico.DoesNotExist:
+                    raise serializers.ValidationError({
+                        'medico': 'El médico especificado no existe'
+                    })
         
-        if citas_existentes.exists():
-            raise serializers.ValidationError(
-                "El médico ya tiene una cita programada en ese horario."
-            )
-
-        # Validar que la fecha no sea pasada
-        from django.utils import timezone
-        from datetime import datetime, date
-        
-        if fecha < date.today():
-            raise serializers.ValidationError(
-                {"fecha": "No se pueden programar citas en fechas pasadas."}
-            )
-
         return data
+    
+    def create(self, validated_data):
+        # Por defecto, las citas nuevas son pendientes
+        validated_data['estado'] = 'pendiente'
+        return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        return representation
