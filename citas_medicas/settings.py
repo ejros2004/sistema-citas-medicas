@@ -7,18 +7,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Cargar variables de entorno
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-# ==================== SEGURIDAD ====================
 SECRET_KEY = 'django-insecure-en9k*-5*nr4+)ejg+byld%3z42md=axgl!27^m3csm9z-aqb_t'
 DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
-# ==================== APLICACIONES ====================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,7 +33,6 @@ INSTALLED_APPS = [
     'autenticacion',
 ]
 
-# ==================== MIDDLEWARE ====================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -71,7 +66,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'citas_medicas.wsgi.application'
 
-# ==================== BASE DE DATOS ====================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -83,7 +77,6 @@ DATABASES = {
     }
 }
 
-# ==================== VALIDACIÓN DE CONTRASEÑAS ====================
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -99,46 +92,37 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# ==================== INTERNACIONALIZACIÓN ====================
 LANGUAGE_CODE = 'es-es'
 TIME_ZONE = 'America/Managua'
 USE_I18N = True
 USE_TZ = True
 
-# ==================== ARCHIVOS ESTÁTICOS ====================
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ==================== CORS ====================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "http://localhost:8001",
-    "http://localhost:8002",
-    "http://localhost:8003",
-    "http://localhost:8004",
-    "http://localhost:8005",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# ==================== REST FRAMEWORK ====================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
+    # COMENTADO para evitar problemas de permisos globales
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ],
 }
 
-# ==================== SIMPLE JWT ====================
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -146,13 +130,10 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# ==================== AUTENTICACIÓN DJANGO ====================
-# ¡¡¡IMPORTANTE: CAMBIA SOLO ESTA LÍNEA!!!
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/app/'  # ¡¡¡CAMBIA DE '/' A '/app/'!!!
+LOGIN_REDIRECT_URL = '/app/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-# ==================== LOGGING ====================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -166,11 +147,3 @@ LOGGING = {
         'level': 'DEBUG',
     },
 }
-
-# ==================== URLs DE APIs EXTERNAS ====================
-AUTH_API_URL = os.getenv('AUTH_URL', 'http://localhost:8005')
-ESPECIALIDADES_API_URL = os.getenv('ESPECIALIDADES_URL', 'http://localhost:8001')
-MEDICOS_API_URL = os.getenv('MEDICOS_URL', 'http://localhost:8002')
-PACIENTES_API_URL = os.getenv('PACIENTES_URL', 'http://localhost:8003')
-CITAS_API_URL = os.getenv('CITAS_URL', 'http://localhost:8004')
-GATEWAY_API_URL = os.getenv('GATEWAY_URL', 'http://localhost:8000')

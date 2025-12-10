@@ -1,4 +1,4 @@
-# autenticacion/views.py - VERSIÓN CORREGIDA SIN DUPLICADOS
+# autenticacion/views.py - COMPLETO CON CORRECCIÓN CRÍTICA
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -22,15 +22,12 @@ logger = logging.getLogger(__name__)
 # ==================== VISTAS HTML ====================
 
 def login_view(request):
-    """Vista para renderizar la página de login"""
     print(f"🔐 LoginView HTML accedida por: {request.user} - Autenticado: {request.user.is_authenticated}")
     
-    # Si ya está autenticado, redirigir a la app
     if request.user.is_authenticated:
         print(f"✅ Usuario ya autenticado ({request.user.username}), redirigiendo a /app/")
         return redirect('/app/')
     
-    # Si es POST, procesar login tradicional (formulario HTML)
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -43,27 +40,22 @@ def login_view(request):
             login(request, user)
             print(f"✅ Login HTML exitoso para {username}")
             
-            # Redirigir a la aplicación
             return redirect('/app/')
         else:
-            # Credenciales inválidas
             print(f"❌ Credenciales inválidas para {username}")
             return render(request, 'autenticacion/login.html', {
                 'error': 'Credenciales inválidas. Intenta nuevamente.'
             })
     
-    # GET request → mostrar formulario de login
     return render(request, 'autenticacion/login.html')
 
 def logout_view(request):
-    """Vista para cerrar sesión"""
     print(f"👋 Logout de {request.user.username}")
     logout(request)
     return redirect('/login/')
 
 @login_required
 def dashboard_view(request):
-    """Vista principal después del login"""
     return render(request, 'index.html')
 
 # ==================== VISTAS API ====================
@@ -76,7 +68,6 @@ class LoginAPIView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             
-            # Asegurar que superusers tengan tipo_usuario = 'admin'
             if user.is_superuser:
                 perfil, created = PerfilUsuario.objects.get_or_create(user=user)
                 if perfil.tipo_usuario != 'admin':
@@ -84,13 +75,10 @@ class LoginAPIView(APIView):
                     perfil.save()
                     logger.info(f"✅ Superuser {user.username} configurado como admin")
             
-            # Generar tokens JWT
             refresh = RefreshToken.for_user(user)
             
-            # Iniciar sesión en Django
             login(request, user)
             
-            # Obtener información del perfil
             perfil_data = {}
             if hasattr(user, 'perfil'):
                 perfil_data = {
@@ -125,7 +113,6 @@ class RegistroAPIView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Iniciar sesión automáticamente
             login(request, user)
             
             return Response({
@@ -159,18 +146,15 @@ class CambioPasswordAPIView(APIView):
         if serializer.is_valid():
             user = request.user
             
-            # Verificar contraseña actual
             if not user.check_password(serializer.validated_data['old_password']):
                 return Response(
                     {'old_password': ['Contraseña actual incorrecta']},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Cambiar contraseña
             user.set_password(serializer.validated_data['new_password'])
             user.save()
             
-            # Actualizar sesión para no cerrarla
             update_session_auth_hash(request, user)
             
             return Response({'message': 'Contraseña cambiada exitosamente'})
@@ -209,13 +193,11 @@ class UserAdminAPIView(APIView):
         if serializer.is_valid():
             serializer.save()
             
-            # Actualizar tipo de usuario si se envió
             tipo_usuario = request.data.get('tipo_usuario')
             if tipo_usuario and hasattr(user, 'perfil'):
                 user.perfil.tipo_usuario = tipo_usuario
                 user.perfil.save()
                 
-                # Actualizar grupos
                 user.groups.clear()
                 grupo, created = Group.objects.get_or_create(name=tipo_usuario)
                 user.groups.add(grupo)
@@ -228,7 +210,6 @@ class UserAdminAPIView(APIView):
         try:
             user = User.objects.get(id=user_id)
             
-            # No permitir eliminar al superuser actual
             if user == request.user:
                 return Response(
                     {'error': 'No puedes eliminar tu propio usuario'},
@@ -244,7 +225,6 @@ class UserAdminAPIView(APIView):
 # ==================== FUNCIONES DE AYUDA ====================
 
 def redirect_por_rol(tipo_usuario):
-    """Redirige según el tipo de usuario"""
     if tipo_usuario == 'admin':
         return redirect('/')
     elif tipo_usuario == 'medico':
@@ -255,20 +235,15 @@ def redirect_por_rol(tipo_usuario):
         return redirect('/')
 
 def es_admin(user):
-    """Verifica si el usuario es administrador"""
     return hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'admin'
 
 def es_medico(user):
-    """Verifica si el usuario es médico"""
     return hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'medico'
 
 def es_paciente(user):
-    """Verifica si el usuario es paciente"""
     return hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'paciente'
 
-# Decoradores personalizados
 def admin_required(view_func):
-    """Decorador para vistas que requieren ser admin"""
     decorated_view_func = user_passes_test(
         lambda u: es_admin(u) and u.is_authenticated,
         login_url='/login/'
@@ -276,7 +251,6 @@ def admin_required(view_func):
     return decorated_view_func
 
 def medico_required(view_func):
-    """Decorador para vistas que requieren ser médico"""
     decorated_view_func = user_passes_test(
         lambda u: es_medico(u) and u.is_authenticated,
         login_url='/login/'
@@ -284,21 +258,28 @@ def medico_required(view_func):
     return decorated_view_func
 
 def paciente_required(view_func):
-    """Decorador para vistas que requieren ser paciente"""
     decorated_view_func = user_passes_test(
         lambda u: es_paciente(u) and u.is_authenticated,
         login_url='/login/'
     )(view_func)
     return decorated_view_func
 
-# Vista para verificar autenticación y rol
+# ==================== VISTA CORREGIDA - ¡ESTA ES LA CLAVE! ====================
+
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # ¡CAMBIADO de [IsAuthenticated] a [AllowAny]!
 def verificar_autenticacion(request):
     """Verifica si el usuario está autenticado y devuelve su información"""
     user = request.user
     
-    # Asegurar que superusers tengan tipo_usuario = 'admin'
+    # Si no está autenticado, devolver información básica
+    if not user.is_authenticated:
+        return Response({
+            'autenticado': False,
+            'message': 'Usuario no autenticado'
+        })
+    
+    # Si es superuser, asegurar que sea admin
     if user.is_superuser:
         perfil, created = PerfilUsuario.objects.get_or_create(user=user)
         if perfil.tipo_usuario != 'admin':
@@ -316,12 +297,9 @@ def verificar_autenticacion(request):
         'perfil': perfil_data
     })
 
-# ==================== VISTA DE DEPURACIÓN ====================
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def debug_info(request):
-    """Vista de depuración para verificar permisos y perfiles"""
     from django.contrib.auth.models import User
     from pacientes.models import Paciente
     from medicos.models import Medico
@@ -338,7 +316,6 @@ def debug_info(request):
     }
     
     if request.user.is_authenticated:
-        # Información del perfil
         if hasattr(request.user, 'perfil'):
             info['perfil'] = {
                 'tipo_usuario': request.user.perfil.tipo_usuario,
@@ -346,7 +323,6 @@ def debug_info(request):
                 'telefono': request.user.perfil.telefono,
             }
         
-        # Si es paciente, verificar si tiene objeto Paciente
         if hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'paciente':
             try:
                 paciente = Paciente.objects.get(user=request.user)
@@ -359,7 +335,6 @@ def debug_info(request):
             except Paciente.DoesNotExist:
                 info['paciente_info'] = 'ERROR: No tiene objeto Paciente'
         
-        # Si es médico, verificar si tiene objeto Medico
         if hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'medico':
             try:
                 medico = Medico.objects.get(user=request.user)

@@ -1,4 +1,4 @@
-venv/
+.venv/
 __pycache__/
 *.pyc
 db.sqlite3
@@ -7,3 +7,20 @@ media/
 .DS_Store
 .idea/
 .vscode/
+
+# .gitignore - AGREGAR estas líneas al inicio
+
+# Entorno virtual Python
+.venv/
+venv/
+env/
+
+# VS Code/VS Studio
+.vs/
+.vscode/
+__pycache__/
+*.pyc
+
+# Django
+*.sqlite3
+*.log

@@ -1,4 +1,3 @@
-# citas/serializers.py
 from rest_framework import serializers
 from .models import Cita
 from pacientes.models import Paciente
@@ -44,7 +43,6 @@ class CitaSerializer(serializers.ModelSerializer):
         return ""
     
     def validate(self, data):
-        # Validar que la fecha no sea en el pasado
         fecha_cita = data.get('fecha')
         hora_cita = data.get('hora')
         
@@ -59,13 +57,11 @@ class CitaSerializer(serializers.ModelSerializer):
                     'fecha': 'No se pueden crear citas en el pasado'
                 })
             
-            # Validar que el médico exista
             medico = data.get('medico')
             if medico:
                 try:
                     medico_obj = Medico.objects.get(id=medico.id if hasattr(medico, 'id') else medico)
                     
-                    # Verificar si ya existe una cita en ese horario
                     cita_existente = Cita.objects.filter(
                         medico=medico_obj,
                         fecha=fecha_cita,
@@ -73,7 +69,6 @@ class CitaSerializer(serializers.ModelSerializer):
                         estado__in=['pendiente', 'confirmada']
                     )
                     
-                    # Excluir la cita actual si se está editando
                     if self.instance:
                         cita_existente = cita_existente.exclude(id=self.instance.id)
                     
@@ -82,7 +77,6 @@ class CitaSerializer(serializers.ModelSerializer):
                             'hora': 'El médico ya tiene una cita programada en este horario'
                         })
                     
-                    # Validar horario del médico
                     if hora_cita < medico_obj.horario_inicio or hora_cita > medico_obj.horario_fin:
                         raise serializers.ValidationError({
                             'hora': f'El médico solo atiende de {medico_obj.horario_inicio.strftime("%I:%M %p")} a {medico_obj.horario_fin.strftime("%I:%M %p")}'
@@ -96,7 +90,6 @@ class CitaSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        # Por defecto, las citas nuevas son pendientes
         validated_data['estado'] = 'pendiente'
         return super().create(validated_data)
     

@@ -1,4 +1,4 @@
-# autenticacion/serializers.py
+# autenticacion/serializers.py - COMPLETO
 from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate
@@ -36,7 +36,6 @@ class LoginSerializer(serializers.Serializer):
                     logger.warning(f"Usuario {username} desactivado")
                     raise serializers.ValidationError("Usuario desactivado.")
                 
-                # VERIFICAR Y CREAR PERFIL SI NO EXISTE
                 if not hasattr(user, 'perfil'):
                     logger.warning(f"Usuario {username} no tiene perfil. Creando...")
                     try:
@@ -79,11 +78,9 @@ class RegistroSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        # Extraer campos adicionales
         tipo_usuario = validated_data.pop('tipo_usuario')
         validated_data.pop('password2')
         
-        # Crear usuario
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -92,11 +89,9 @@ class RegistroSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', '')
         )
         
-        # Actualizar perfil con tipo de usuario
         user.perfil.tipo_usuario = tipo_usuario
         user.perfil.save()
         
-        # Asignar a grupo correspondiente
         grupo, created = Group.objects.get_or_create(name=tipo_usuario)
         user.groups.add(grupo)
         

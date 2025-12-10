@@ -1,4 +1,3 @@
-# medicos/views.py - MODIFICAR
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
@@ -10,32 +9,23 @@ from .serializers import MedicoSerializer, EspecialidadSerializer
 
 logger = logging.getLogger(__name__)
 
-# ==================== PERMISOS PERSONALIZADOS ====================
-
 class EsAdmin(BasePermission):
-    """Permiso que solo permite acceso a administradores"""
     def has_permission(self, request, view):
         return request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'admin'
 
 class PermisoMedicos(BasePermission):
-    """Permiso personalizado para operaciones de médicos"""
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         
-        # Solo admin puede ver/editar/eliminar médicos
         return hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'admin'
 
 class PermisoEspecialidades(BasePermission):
-    """Permiso personalizado para operaciones de especialidades"""
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         
-        # Solo admin puede manejar especialidades
         return hasattr(request.user, 'perfil') and request.user.perfil.tipo_usuario == 'admin'
-
-# ==================== VIEWSETS ====================
 
 class EspecialidadViewSet(viewsets.ModelViewSet):
     queryset = Especialidad.objects.all()

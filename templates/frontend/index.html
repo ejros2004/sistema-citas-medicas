@@ -1,3 +1,4 @@
+<!-- templates/frontend/index.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -12,7 +13,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header Mejorado -->
         <header class="header">
             <div class="header-content">
                 <div class="logo">
@@ -40,9 +40,7 @@
             </div>
         </header>
 
-        <!-- Contenido Principal -->
         <main class="main-content">
-            <!-- Sección Pacientes -->
             <section id="pacientes" class="tab-content active">
                 <div class="section-header">
                     <div class="section-title">
@@ -101,7 +99,6 @@
                 </div>
             </section>
 
-            <!-- Sección Médicos -->
             <section id="medicos" class="tab-content">
                 <div class="section-header">
                     <div class="section-title">
@@ -160,7 +157,6 @@
                 </div>
             </section>
 
-            <!-- Sección Especialidades -->
             <section id="especialidades" class="tab-content">
                 <div class="section-header">
                     <div class="section-title">
@@ -213,7 +209,6 @@
                 </div>
             </section>
 
-            <!-- Sección Citas -->
             <section id="citas" class="tab-content">
                 <div class="section-header">
                     <div class="section-title">
@@ -281,7 +276,6 @@
             </section>
         </main>
 
-        <!-- Loading Spinner Mejorado -->
         <div id="loading" class="loading hidden">
             <div class="loading-content">
                 <div class="spinner"></div>
@@ -290,8 +284,6 @@
         </div>
     </div>
 
-    <!-- Modales Mejorados -->
-    
     <!-- Modal Paciente -->
     <div id="pacienteModal" class="modal hidden">
         <div class="modal-content">
@@ -326,6 +318,28 @@
                                placeholder="Formato: 001-010101-1000A"
                                oninput="validarDNI(this)">
                         <small class="validation-hint">Formato: 000-000000-0000A</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pacientePassword">
+                                <i class="fas fa-lock"></i>
+                                Contraseña: *
+                            </label>
+                            <input type="password" id="pacientePassword" required 
+                                   placeholder="Mínimo 6 caracteres"
+                                   oninput="validarPassword(this)">
+                            <small class="validation-hint">Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="pacienteConfirmPassword">
+                                <i class="fas fa-lock"></i>
+                                Confirmar Contraseña: *
+                            </label>
+                            <input type="password" id="pacienteConfirmPassword" required 
+                                   placeholder="Repite la contraseña"
+                                   oninput="validarConfirmPassword(this)">
+                            <small class="validation-hint">Debe coincidir con la contraseña</small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="pacienteTelefono">
@@ -392,9 +406,31 @@
                             Nombre: *
                         </label>
                         <input type="text" id="medicoNombre" required 
-                               placeholder="Ingrese nombre del médico"
+                               placeholder="Ej: Dr. Carlos Martínez"
                                oninput="validarNombre(this)">
-                        <small class="validation-hint">Solo letras y espacios (mínimo 3 caracteres)</small>
+                        <small class="validation-hint">Se generará username automático (ej: carlos.martinez)</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="medicoPassword">
+                                <i class="fas fa-lock"></i>
+                                Contraseña: *
+                            </label>
+                            <input type="password" id="medicoPassword" required 
+                                   placeholder="Mínimo 6 caracteres"
+                                   oninput="validarPassword(this)">
+                            <small class="validation-hint">Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="medicoConfirmPassword">
+                                <i class="fas fa-lock"></i>
+                                Confirmar Contraseña: *
+                            </label>
+                            <input type="password" id="medicoConfirmPassword" required 
+                                   placeholder="Repite la contraseña"
+                                   oninput="validarConfirmPassword(this)">
+                            <small class="validation-hint">Debe coincidir con la contraseña</small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="medicoEspecialidad">
@@ -609,7 +645,7 @@
         </div>
     </div>
 
-    <!-- Modal de Errores Mejorado -->
+    <!-- Modal de Errores -->
     <div id="errorModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">

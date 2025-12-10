@@ -1,4 +1,3 @@
-# pacientes/views.py - VERSIÓN COMPLETA FINAL
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
@@ -9,80 +8,62 @@ from .serializers import PacienteSerializer
 
 logger = logging.getLogger(__name__)
 
-# ==================== PERMISOS PERSONALIZADOS ====================
-
 class PermisoPacientes(BasePermission):
-    """Permiso personalizado para operaciones de pacientes"""
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         
-        # Admin puede ver/editar/eliminar todos los pacientes
-        # Paciente solo puede ver su propio perfil
         return hasattr(request.user, 'perfil')
     
     def has_object_permission(self, request, view, obj):
-        """Permisos a nivel de objeto"""
         if not request.user.is_authenticated:
             return False
         
-        # Admin puede hacer todo
         if request.user.perfil.tipo_usuario == 'admin':
             return True
         
-        # Paciente solo puede ver/editar su propio perfil
         if request.user.perfil.tipo_usuario == 'paciente':
             return obj.user == request.user
         
         return False
 
-# ==================== VIEWSET ====================
-
 class PacienteViewSet(viewsets.ModelViewSet):
     serializer_class = PacienteSerializer
     permission_classes = [IsAuthenticated, PermisoPacientes]
     
+    queryset = Paciente.objects.all()
+    
     def get_queryset(self):
-        """Filtrar pacientes según el rol del usuario"""
         user = self.request.user
         
         if not user.is_authenticated:
             return Paciente.objects.none()
         
-        # Admin ve todos los pacientes
         if hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'admin':
             return Paciente.objects.all().select_related('user')
         
-        # Paciente ve solo su propio perfil
         if hasattr(user, 'perfil') and user.perfil.tipo_usuario == 'paciente':
             try:
                 return Paciente.objects.filter(user=user).select_related('user')
             except Paciente.DoesNotExist:
                 return Paciente.objects.none()
         
-        # Médico no debería ver pacientes directamente desde aquí
         return Paciente.objects.none()
     
     def list(self, request, *args, **kwargs):
-        """
-        Listar todos los pacientes (solo admin) o solo el propio (paciente)
-        """
         try:
             logger.info(f"📋 LIST pacientes solicitado por {request.user.username} ({request.user.perfil.tipo_usuario})")
             
-            # Si es paciente, mostrar solo su perfil
             if request.user.perfil.tipo_usuario == 'paciente':
                 try:
                     paciente = Paciente.objects.get(user=request.user)
                     serializer = self.get_serializer(paciente)
                     logger.info(f"👤 Paciente viendo su propio perfil - ID: {paciente.id}")
-                    # Retornar como array con un solo elemento
                     return Response([serializer.data])
                 except Paciente.DoesNotExist:
                     logger.warning(f"⚠️ Paciente {request.user.username} no tiene perfil de paciente")
                     return Response([], status=status.HTTP_200_OK)
             
-            # Admin ve todos
             pacientes = self.get_queryset()
             serializer = self.get_serializer(pacientes, many=True)
             logger.info(f"✅ Retornando {len(serializer.data)} pacientes para admin")
@@ -96,9 +77,6 @@ class PacienteViewSet(viewsets.ModelViewSet):
             )
 
     def retrieve(self, request, *args, **kwargs):
-        """
-        Obtener un paciente específico
-        """
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
@@ -111,14 +89,9 @@ class PacienteViewSet(viewsets.ModelViewSet):
             )
 
     def create(self, request, *args, **kwargs):
-        """
-        Crear paciente con rollback automático en caso de error
-        """
         try:
             logger.info(f"➕ CREATE paciente solicitado por {request.user.username}")
-            logger.info(f"📦 Datos recibidos: {request.data}")
             
-            # Solo admin puede crear pacientes
             if not hasattr(request.user, 'perfil') or request.user.perfil.tipo_usuario != 'admin':
                 return Response(
                     {'error': 'Solo los administradores pueden crear pacientes'},
@@ -126,7 +99,6 @@ class PacienteViewSet(viewsets.ModelViewSet):
                 )
             
             with transaction.atomic():
-                # Validar y crear paciente
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
                 paciente = serializer.save()
@@ -143,9 +115,6 @@ class PacienteViewSet(viewsets.ModelViewSet):
             )
 
     def update(self, request, *args, **kwargs):
-        """
-        Actualizar paciente con logging detallado
-        """
         try:
             instance = self.get_object()
             logger.info(f"✏️ UPDATE paciente {instance.id} solicitado por {request.user.username}")
@@ -167,14 +136,10 @@ class PacienteViewSet(viewsets.ModelViewSet):
             )
 
     def destroy(self, request, *args, **kwargs):
-        """
-        Eliminar paciente (solo admin)
-        """
         try:
             instance = self.get_object()
             logger.info(f"🗑️ DELETE paciente {instance.id} solicitado por {request.user.username}")
             
-            # Solo admin puede eliminar pacientes
             if not hasattr(request.user, 'perfil') or request.user.perfil.tipo_usuario != 'admin':
                 return Response(
                     {'error': 'Solo los administradores pueden eliminar pacientes'},
@@ -185,7 +150,6 @@ class PacienteViewSet(viewsets.ModelViewSet):
                 paciente_id = instance.id
                 paciente_dni = instance.dni
                 
-                # Eliminar localmente
                 instance.delete()
                 logger.info(f"✅ Paciente eliminado - ID: {paciente_id}, DNI: {paciente_dni}")
                 

@@ -1,0 +1,76 @@
+1. Crear entorno:
+
+python3 -m venv .venv 
+
+2. Activar entorno
+
+.venv\Scripts\activate                                                                                         
+
+3. Instalar Dependencias
+pip install -r requirements.txt
+
+4.EJECUTAR EN PGADMIN4:
+
+        -- Revocar privilegios por defecto
+                REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM citas_user;
+                REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM citas_user;
+                REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM citas_user;
+                REVOKE ALL ON SCHEMA public FROM citas_user;
+                
+        -- Revocar privilegios por omisión
+                ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM citas_user;
+                ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM citas_user;
+                ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM citas_user;
+                
+        -- También revocar de otras bases de datos si las tiene
+                REVOKE CONNECT ON DATABASE postgres FROM citas_user;
+
+
+        -- Eliminar si existen (cuidado si ya tienes datos)
+        DROP DATABASE IF EXISTS citas_medicas_db;
+        DROP USER IF EXISTS citas_user;
+
+        -- Crear usuario
+        CREATE USER citas_user WITH PASSWORD '12345';
+
+        -- Crear base de datos con dueño
+        CREATE DATABASE citas_medicas_db 
+            OWNER citas_user
+            ENCODING 'UTF8'
+            LC_COLLATE = 'es_ES.UTF-8'
+            LC_CTYPE = 'es_ES.UTF-8'
+            TEMPLATE template0;
+
+        -- Conceder todos los privilegios
+        GRANT ALL PRIVILEGES ON DATABASE citas_medicas_db TO citas_user;
+
+
+        -- Conceder privilegios en el esquema
+        GRANT ALL ON SCHEMA public TO citas_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO citas_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO citas_user;
+
+
+
+5. Ejecutar migraciones:
+python manage.py makemigrations
+python manage.py migrate
+
+6. Ejecutar create_test_users.py
+
+python create_test_users.py
+
+7. Usuarios:
+
+ADMIN:
+Usuario: admin
+Contraseña: admin123
+
+MÉDICOS (todos usan misma contraseña):
+Usuario: dr.perez, dra.garcia, dr.rodriguez
+Contraseña: doctor123
+
+PACIENTES (todos usan misma contraseña):
+Usuario: ana.martinez, jose.lopez, maria.gonzalez
+Contraseña: paciente123
+
